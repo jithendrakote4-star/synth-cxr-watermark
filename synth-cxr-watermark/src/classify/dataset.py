@@ -19,16 +19,20 @@ def build_dataframe(root):
     return df
 
 def make_splits(df, n_train=12000, n_test=5000, seed=42):
-    # Patient-wise split: oka patient images train and test rendu lo undakudadu (data leakage avvakunda)
+    # Patient-wise split: train 70% / val 10% / test 20% patients
     rng = np.random.RandomState(seed)
     patients = df["Patient ID"].unique()
     rng.shuffle(patients)
-    cut = int(0.8 * len(patients))
-    train_pool = df[df["Patient ID"].isin(patients[:cut])]
-    test_pool = df[df["Patient ID"].isin(patients[cut:])]
-    train = train_pool.sample(n=min(n_train, len(train_pool)), random_state=seed)
-    test = test_pool.sample(n=min(n_test, len(test_pool)), random_state=seed)
-    return train.reset_index(drop=True), test.reset_index(drop=True)
+    n = len(patients)
+    tr_p = patients[: int(0.7 * n)]
+    va_p = patients[int(0.7 * n): int(0.8 * n)]
+    te_p = patients[int(0.8 * n):]
+    tr = df[df["Patient ID"].isin(tr_p)]
+    va = df[df["Patient ID"].isin(va_p)]
+    te = df[df["Patient ID"].isin(te_p)]
+    tr = tr.sample(n=min(n_train, len(tr)), random_state=seed)
+    te = te.sample(n=min(n_test, len(te)), random_state=seed)
+    return tr.reset_index(drop=True), va.reset_index(drop=True), te.reset_index(drop=True)
 
 class CXRDataset(Dataset):
     def __init__(self, df, transform=None):

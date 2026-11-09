@@ -1,5 +1,6 @@
 import argparse, json, os
 import numpy as np
+import pandas as pd
 import timm, torch
 from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
@@ -14,6 +15,9 @@ parser.add_argument("--epochs", type=int, default=5)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--split_seed", type=int, default=42)  # patient split eppudu fixed
 parser.add_argument("--limit", type=int, default=None)  # quick test kosam
+parser.add_argument("--synth_csv", default=None)
+parser.add_argument("--synth_n", type=int, default=0)
+parser.add_argument("--tag", default="baseline")
 args = parser.parse_args()
 
 torch.manual_seed(args.seed)
@@ -24,6 +28,10 @@ df = build_dataframe(args.root)
 train_df, val_df, test_df = make_splits(df, seed=args.split_seed)
 if args.limit:
     train_df = train_df.head(args.limit)
+    if args.synth_csv and args.synth_n > 0:
+    syn = pd.read_csv(args.synth_csv)
+    syn = syn.sample(n=min(args.synth_n, len(syn)), random_state=0)
+    train_df = pd.concat([train_df, syn], ignore_index=True)   # synthetic train lo matrame, val/test real
     val_df = val_df.head(args.limit)
     test_df = test_df.head(args.limit)
 print("train:", len(train_df), "val:", len(val_df), "test:", len(test_df))
@@ -76,6 +84,6 @@ test_mean = float(np.mean(list(test_aucs.values())))
 print(f"TEST mean AUC (best-val checkpoint): {test_mean:.4f}", test_aucs)
 
 os.makedirs(args.out, exist_ok=True)
-with open(os.path.join(args.out, f"baseline_seed{args.seed}.json"), "w") as f:
+with open(os.path.join(args.out, f"{args.tag}_seed{args.seed}.json"), "w") as f:
     json.dump({"best_val_auc": best_val, "test_mean_auc": test_mean,
                "per_class": test_aucs}, f, indent=2)

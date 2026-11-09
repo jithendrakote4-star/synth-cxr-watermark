@@ -26,14 +26,10 @@ dev = "cuda" if torch.cuda.is_available() else "cpu"
 
 df = build_dataframe(args.root)
 train_df, val_df, test_df = make_splits(df, seed=args.split_seed)
-if args.limit:
-    train_df = train_df.head(args.limit)
-    if args.synth_csv and args.synth_n > 0:
+if args.synth_csv and args.synth_n > 0:
     syn = pd.read_csv(args.synth_csv)
     syn = syn.sample(n=min(args.synth_n, len(syn)), random_state=0)
     train_df = pd.concat([train_df, syn], ignore_index=True)   # synthetic train lo matrame, val/test real
-    val_df = val_df.head(args.limit)
-    test_df = test_df.head(args.limit)
 print("train:", len(train_df), "val:", len(val_df), "test:", len(test_df))
 print(train_df[PATHOLOGIES].sum())
 

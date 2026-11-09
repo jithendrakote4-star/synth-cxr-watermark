@@ -12,6 +12,7 @@ parser.add_argument("--root", required=True)
 parser.add_argument("--out", default="results")
 parser.add_argument("--epochs", type=int, default=5)
 parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--split_seed", type=int, default=42)  # patient split eppudu fixed
 parser.add_argument("--limit", type=int, default=None)  # quick test kosam
 args = parser.parse_args()
 
@@ -20,7 +21,7 @@ np.random.seed(args.seed)
 dev = "cuda" if torch.cuda.is_available() else "cpu"
 
 df = build_dataframe(args.root)
-train_df, val_df, test_df = make_splits(df, seed=args.seed)
+train_df, val_df, test_df = make_splits(df, seed=args.split_seed)
 if args.limit:
     train_df = train_df.head(args.limit)
     val_df = val_df.head(args.limit)
@@ -29,7 +30,7 @@ print("train:", len(train_df), "val:", len(val_df), "test:", len(test_df))
 print(train_df[PATHOLOGIES].sum())
 
 norm = T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-tr_tf = T.Compose([T.Resize((256, 256)), T.RandomHorizontalFlip(), T.ToTensor(), norm])
+tr_tf = T.Compose([T.Resize((256, 256)), T.ToTensor(), norm])
 te_tf = T.Compose([T.Resize((256, 256)), T.ToTensor(), norm])
 
 tr = DataLoader(CXRDataset(train_df, tr_tf), batch_size=32, shuffle=True, num_workers=2)

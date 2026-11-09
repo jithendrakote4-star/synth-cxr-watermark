@@ -24,3 +24,20 @@ def resize_back(img, scale):
 
 def blur(img, radius):
     return np.array(Image.fromarray(img).filter(ImageFilter.GaussianBlur(radius)))
+
+
+def crop_resize(img, frac):
+    """Center crop (frac of side) chesi malli original size ki resize chestundi."""
+    h, w = img.shape
+    ch, cw = int(h * frac), int(w * frac)
+    t, l = (h - ch) // 2, (w - cw) // 2
+    im = Image.fromarray(img[t:t + ch, l:l + cw]).resize((w, h), Image.BILINEAR)
+    return np.array(im)
+
+
+def rotate(img, deg):
+    return np.array(Image.fromarray(img).rotate(deg, resample=Image.BILINEAR))
+
+
+def shift(img, px):
+    return np.roll(img, px, axis=1)

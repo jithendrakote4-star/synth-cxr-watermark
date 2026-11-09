@@ -18,6 +18,7 @@ parser.add_argument("--limit", type=int, default=None)  # quick test kosam
 parser.add_argument("--synth_csv", default=None)
 parser.add_argument("--synth_n", type=int, default=0)
 parser.add_argument("--tag", default="baseline")
+parser.add_argument("--save_ckpt", default=None)  # best-val weights save cheyyadaniki path
 args = parser.parse_args()
 
 torch.manual_seed(args.seed)
@@ -26,6 +27,10 @@ dev = "cuda" if torch.cuda.is_available() else "cpu"
 
 df = build_dataframe(args.root)
 train_df, val_df, test_df = make_splits(df, seed=args.split_seed)
+if args.limit:
+    train_df = train_df.head(args.limit)
+    val_df = val_df.head(args.limit)
+    test_df = test_df.head(args.limit)
 if args.synth_csv and args.synth_n > 0:
     syn = pd.read_csv(args.synth_csv)
     syn = syn.sample(n=min(args.synth_n, len(syn)), random_state=0)
@@ -46,6 +51,7 @@ model = timm.create_model("densenet121", pretrained=True,
 opt = torch.optim.AdamW(model.parameters(), lr=1e-4)
 loss_fn = torch.nn.BCEWithLogitsLoss()
 
+
 def evaluate(loader):
     model.eval()
     ys, ps = [], []
@@ -59,6 +65,7 @@ def evaluate(loader):
         if 0 < ys[:, i].sum() < len(ys):
             aucs[p] = float(roc_auc_score(ys[:, i], ps[:, i]))
     return aucs
+
 
 best_val, best_state = -1.0, None
 for ep in range(args.epochs):
@@ -75,6 +82,9 @@ for ep in range(args.epochs):
         best_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
 
 model.load_state_dict(best_state)
+if args.save_ckpt:
+    os.makedirs(os.path.dirname(args.save_ckpt) or ".", exist_ok=True)
+    torch.save(best_state, args.save_ckpt)
 test_aucs = evaluate(te)   # test set okasari matrame use chestam
 test_mean = float(np.mean(list(test_aucs.values())))
 print(f"TEST mean AUC (best-val checkpoint): {test_mean:.4f}", test_aucs)
